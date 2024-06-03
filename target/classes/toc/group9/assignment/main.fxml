@@ -77,29 +77,35 @@
                            <children>
                               <VBox alignment="CENTER" prefHeight="277.0" prefWidth="130.0">
                                  <children>
-                                    <Button mnemonicParsing="false" prefWidth="100.0" text="NFA">
+                                    <Button mnemonicParsing="false" onAction="#f1" prefWidth="100.0" text="NFA">
                                        <VBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </VBox.margin>
                                     </Button>
-                                    <Button mnemonicParsing="false" prefWidth="100.0" text="NFA without ε">
+                                    <Button mnemonicParsing="false" onAction="#f2" prefWidth="100.0" text="NFA without ε">
                                        <VBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </VBox.margin>
                                     </Button>
-                                    <Button layoutX="25.0" layoutY="118.0" mnemonicParsing="false" prefWidth="100.0" text="DFA">
+                                    <Button layoutX="25.0" layoutY="118.0" mnemonicParsing="false" onAction="#f3" prefWidth="100.0" text="DFA">
                                        <VBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </VBox.margin>
                                     </Button>
-                                    <Button layoutX="25.0" layoutY="171.0" mnemonicParsing="false" prefWidth="100.0" text="Test">
+                                    <Button layoutX="25.0" layoutY="171.0" mnemonicParsing="false" onAction="#f4" prefWidth="100.0" text="Test">
                                        <VBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </VBox.margin>
                                     </Button>
+                                    <Button fx:id="checkButton" disable="true" mnemonicParsing="false" onAction="#check" text="Check" />
                                  </children>
                               </VBox>
-                              <TextArea editable="false" prefHeight="270.0" prefWidth="650.0">
+                              <TextArea fx:id="outputArea1" editable="false" maxWidth="-Infinity" prefHeight="275.0" prefWidth="340.0" text="TESTING">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </HBox.margin>
+                              </TextArea>
+                              <TextArea fx:id="outputArea2" editable="false" layoutX="145.0" layoutY="15.0" prefHeight="275.0" prefWidth="340.0">
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </HBox.margin>

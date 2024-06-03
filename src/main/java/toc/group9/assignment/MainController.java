@@ -3,6 +3,7 @@ package toc.group9.assignment;
 import java.util.ArrayList;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -28,7 +29,11 @@ public class MainController {
     @FXML
     TextArea inputArea;
     @FXML
-    TextArea outputArea;
+    TextArea outputArea1;
+    @FXML
+    TextArea outputArea2;
+    @FXML
+    Button checkButton;
 
     public void initialize() {
         addMembers();
@@ -37,7 +42,50 @@ public class MainController {
     @FXML // clear button
     private void clear() {
         inputArea.clear();
-       // outputArea.clear(); TODO add any clear function as needed
+        outputArea1.clear();
+        outputArea2.clear(); // TODO add any clear function as needed!!
+    }
+
+    // TODO NFA
+    @FXML
+    private void f1() {
+        String string = "You have pressed f1 button.\n" +
+                        "You wrote: " + inputArea.getText();
+        outputArea1.setText(string);
+        outputArea1.setEditable(false);
+        checkButton.setDisable(true);
+
+    }
+
+    // TODO NFA w/o epsilon
+    @FXML
+    private void f2() {
+        outputArea1.setText("you have pressed f2 button"); // for testing only
+        outputArea1.setEditable(false);
+        checkButton.setDisable(true);
+
+    }
+
+    // TODO DFA
+    @FXML
+    private void f3() {
+        outputArea1.setText("you have pressed f3 button"); // for testing only
+        outputArea1.setEditable(false);
+        checkButton.setDisable(true);
+
+    }
+
+    @FXML
+    private void f4() {
+        outputArea1.setText("you have pressed f4 button, this TextArea is now editable"); // for testing only
+        outputArea1.setEditable(true);
+        checkButton.setDisable(false);
+    }
+
+    // TODO Test
+    @FXML
+    private void check() {
+        outputArea2.setText("OK\nNO\nOK\n"); // for testing only
     }
 
     // adding members into memberTable
