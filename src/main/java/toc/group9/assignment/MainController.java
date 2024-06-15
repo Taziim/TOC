@@ -1,6 +1,11 @@
 package toc.group9.assignment;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -13,6 +18,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 public class MainController {
 
@@ -32,14 +39,27 @@ public class MainController {
 
     public void initialize() {
         addMembers();
-
-        Font font = Font.font("Monospaced", FontWeight.NORMAL, FontPosture.REGULAR, 15);
-        outputArea2.setFont(font);
     }
 
-    @FXML // TODO import button
+    @FXML // Import RG txt file to inputArea
     private void importRG() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select regular grammar text file");
+        fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"));
 
+        Stage stage = (Stage) inputArea.getScene().getWindow();
+        File file = fileChooser.showOpenDialog(stage);
+
+        if (file != null) {
+            try {
+                Path filePath = file.toPath();
+                String importedRG = Files.readString(filePath);
+
+                inputArea.setText(importedRG);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @FXML // clear button
@@ -63,9 +83,10 @@ public class MainController {
         // get whole input
         String input = inputArea.getText().trim();
 
-        if (input.isBlank()) {
+        /* unreachable
+            if (input.isBlank()) 
             outputArea1.setText("Please enter a valid regular grammar.");
-        }
+        */ 
 
         // RG to NFA logic
         try {
@@ -155,39 +176,59 @@ public class MainController {
             outputArea1.setText(nfaDesc.toString());
 
             // NFA transition table
-            int columnWidth = 10;
+            if (hasEpsilon)
+                alphabet.add("ε");
+
+            int[] maxWidths = new int[alphabet.size()];
+            Arrays.fill(maxWidths, 0);
+
             for(String state : states) {
-                for(String a: alphabet) {
+                for(int i = 0; i < alphabet.size(); i++) {
+                    String a = alphabet.get(i);
+
                     if(transitions.containsKey(state) && transitions.get(state).containsKey(a)) {
-                        int length = String.join(",", transitions.get(state).get(a)).length() + 4;
-                        columnWidth = length > columnWidth ? length : columnWidth;
+                        int width = transitions.get(state).get(a).toString().length();
+                        maxWidths[i] = width > maxWidths[i] ? width : maxWidths[i];
                     }
                 }
             }
             
             StringBuilder nfaTable = new StringBuilder();
-            if (hasEpsilon)
-                alphabet.add("ε");
-            nfaTable.append("δNFA | ").append(String.join("  |  ", alphabet));
-            nfaTable.append("  |\n");
+            nfaTable.append(" δNFA |");
+            for (int i = 0; i < alphabet.size(); i++) {
+                String text = maxWidths[i] == 0 ? alphabet.get(i) +"|" : String.format("%-" + maxWidths[i] + "s|", alphabet.get(i));
+                nfaTable.append(text);
+            }
+            nfaTable.append("\n");
+
+            // nfaTable.append("------");
+            // for (int i = 0; i < alphabet.size(); i++) {
+            //     nfaTable.append(new String(new char[maxWidths[i] + 1]).replace('\0', '-'));
+            // }
+            // nfaTable.append("\n");
 
             for (String state : states) {
                 if (state.equals(startState)) {
-                    nfaTable.append(" ->");
+                    if(acceptStates.contains(state))
+                        nfaTable.append(" *->");
+                    else
+                        nfaTable.append("  ->");
                 } else if (acceptStates.contains(state)) {
-                    nfaTable.append("  *");
+                    nfaTable.append("   *");
                 } else {
-                    nfaTable.append("   ");
+                    nfaTable.append("    ");
                 }
                 nfaTable.append(state).append(" |");
 
-                for (String a : alphabet) {
-                    if(transitions.containsKey(state) && transitions.get(state).containsKey(a)) {
-                        nfaTable.append(" {");
-                        nfaTable.append(String.join(", ", transitions.get(state).get(a)));
-                        nfaTable.append("} |");
+                for (int i = 0; i < alphabet.size(); i++) {
+                    String a = alphabet.get(i);
+                    if (transitions.containsKey(state) && transitions.get(state).containsKey(a)) {
+                        String nextStates = "{" + String.join(", ", transitions.get(state).get(a)) + "}";
+                        String text = maxWidths[i] == 0 ? nextStates + "|" : String.format("%-" + maxWidths[i] + "s|", nextStates);
+                        nfaTable.append(text);
                     } else {
-                        nfaTable.append("  ∅  |");
+                        String text = maxWidths[i] == 0 ? "{ }|" : String.format("%-" + maxWidths[i] + "s|", "{ }");
+                        nfaTable.append(text);
                     }
                 }
 
@@ -231,8 +272,16 @@ public class MainController {
 
     // need user input when testing string so outputArea1 is editable
     private void isF4(boolean b) {
+        outputArea1.clear();
+        outputArea2.clear();
+        
         outputArea1.setEditable(b ? true : false);
         checkButton.setDisable(b ? false : true);
+
+        Font defaultFont = Font.getDefault();
+        Font tablefont = Font.font("Monospaced", FontWeight.NORMAL, FontPosture.REGULAR, 15);
+        outputArea2.setFont(b ? defaultFont : tablefont);
+        
     }
 
     // adding members data into memberTable

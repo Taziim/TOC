@@ -17,7 +17,7 @@
    <children>
       <TabPane prefHeight="600.0" prefWidth="800.0" tabClosingPolicy="UNAVAILABLE">
         <tabs>
-          <Tab text="Home">
+          <Tab text=" Home ">
                <content>
                   <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0">
                      <children>
@@ -51,7 +51,7 @@
                   </VBox>
                </content>
           </Tab>
-          <Tab text="RG -&gt; FA">
+          <Tab text=" RG -&gt; FA ">
                <content>
                   <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0">
                      <children>
@@ -70,7 +70,15 @@
                         </TextArea>
                         <HBox alignment="CENTER" maxWidth="400.0" minWidth="400.0" prefHeight="50.0" prefWidth="400.0">
                            <children>
-                              <Button fx:id="clearButton" mnemonicParsing="false" onAction="#clear" text="Clear" />
+                              <Button mnemonicParsing="false" onAction="#importRG" text="Import">
+                                 <HBox.margin>
+                                    <Insets left="5.0" right="5.0" />
+                                 </HBox.margin></Button>
+                              <Button layoutX="188.0" layoutY="21.0" mnemonicParsing="false" onAction="#clear" text="Clear">
+                                 <HBox.margin>
+                                    <Insets left="5.0" right="5.0" />
+                                 </HBox.margin>
+                              </Button>
                            </children>
                         </HBox>
                         <HBox prefHeight="278.0" prefWidth="800.0">
@@ -100,7 +108,7 @@
                                     <Button fx:id="checkButton" disable="true" mnemonicParsing="false" onAction="#check" text="Check" />
                                  </children>
                               </VBox>
-                              <TextArea fx:id="outputArea1" editable="false" maxWidth="-Infinity" prefHeight="275.0" prefWidth="340.0" text="TESTING">
+                              <TextArea fx:id="outputArea1" editable="false" maxWidth="-Infinity" prefHeight="275.0" prefWidth="340.0">
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </HBox.margin>
@@ -115,7 +123,7 @@
                      </children>
                   </VBox>
                </content></Tab>
-            <Tab text="Help" />
+            <Tab text=" Help " />
         </tabs>
       </TabPane>
    </children>
