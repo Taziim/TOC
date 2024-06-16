@@ -181,9 +181,116 @@ public class MainController {
     @FXML // F2: ε-NFA to NFA without ε
     private void f2() {
         isF4(false);
+        initialiseData();
 
-        outputArea1.setText("you have pressed f2 button"); // for testing only pls remove
+        try {
+            parseRG(inputArea.getText().trim());
 
+            // Compute epsilon-closures for all states
+            HashMap<String, Set<String>> epsilonClosure = new HashMap<>();
+            for (String state : states) {
+                Set<String> nextStateSet = new HashSet<>();
+                nextStateSet.add(state); // Start with the state itself
+                Set<String> epsClosure = epsilonClosure(nextStateSet, nfaTransitions);
+                epsilonClosure.put(state, epsClosure);
+            }
+    
+            // Construct new transitions without epsilon
+            HashMap<String, HashMap<String, ArrayList<String>>> newTransitions = new HashMap<>();
+            for (String state : states) {
+                for (String terminal : alphabet) {
+                    Set<String> reachableStates = new HashSet<>();
+                    for (String epsState : epsilonClosure.get(state)) {
+                        if (nfaTransitions.containsKey(epsState) && nfaTransitions.get(epsState).containsKey(terminal)) {
+                            reachableStates.addAll(nfaTransitions.get(epsState).get(terminal));
+                        }
+                    }
+                    if (!reachableStates.isEmpty()) {
+                        newTransitions.putIfAbsent(state, new HashMap<>());
+                        newTransitions.get(state).put(terminal, new ArrayList<>(reachableStates));
+                    }
+                }
+            }
+    
+            // Update accept states based on epsilon-closures
+            Set<String> newAcceptStates = new HashSet<>(acceptStates);
+    
+            // NFA formal definition
+            StringBuilder nfaDesc = new StringBuilder();
+            nfaDesc.append("M = (Q, Σ, δ, p0, F)\n");
+            nfaDesc.append("Q = { ").append(String.join(", ", states)).append(" }\n");
+            nfaDesc.append("Σ = { ").append(String.join(", ", alphabet)).append(" }\n");
+            nfaDesc.append("δ: Q x Σ -> Pow(Q)\n");
+            nfaDesc.append("p0 = ").append(startState).append("\n");
+            nfaDesc.append("F = { ").append(String.join(", ", newAcceptStates)).append(" }\n");
+            outputArea1.setText(nfaDesc.toString());
+    
+            // NFA transition table
+            int[] maxWidths = new int[alphabet.size()];
+            Arrays.fill(maxWidths, 0);
+
+            for (String state : states) {
+                for (int i = 0; i < alphabet.size(); i++) {
+                    String a = alphabet.get(i);
+                    if (newTransitions.containsKey(state) && newTransitions.get(state).containsKey(a)) {
+                        Set<String> nextStateSet = new HashSet<>();
+                        for (String nextState : newTransitions.get(state).get(a)) {
+                            nextStateSet.addAll(epsilonClosure.get(nextState));
+                        }
+
+                        int width = nextStateSet.toString().length();
+                        maxWidths[i] = width > maxWidths[i] ? width : maxWidths[i];
+                    }
+                }
+            }
+
+            StringBuilder nfaTable = new StringBuilder();
+            nfaTable.append(" δNFA |");
+            for (int i = 0; i < alphabet.size(); i++) {
+                String text = maxWidths[i] == 0 ? alphabet.get(i) + "|" : String.format("%-" + maxWidths[i] + "s|", alphabet.get(i));
+                nfaTable.append(text);
+            }
+            nfaTable.append("\n");
+    
+            for (String state : states) {
+                if (state.equals(startState)) {
+                    if (newAcceptStates.contains(state))
+                        nfaTable.append(" *->");
+                    else
+                        nfaTable.append("  ->");
+                } else if (newAcceptStates.contains(state)) {
+                    nfaTable.append("   *");
+                } else {
+                    nfaTable.append("    ");
+                }
+                nfaTable.append(state).append(" |");
+    
+                for (int i = 0; i < alphabet.size(); i++) {
+                    String a = alphabet.get(i);
+                    if (newTransitions.containsKey(state) && newTransitions.get(state).containsKey(a)) {
+                        Set<String> nextStateSet = new HashSet<>();
+                        for(String nextState : newTransitions.get(state).get(a)){
+                            nextStateSet.addAll(epsilonClosure.get(nextState));
+                        }
+
+                        String nextStates = "{" + String.join(", ", nextStateSet) + "}";
+                        String text = maxWidths[i] == 0 ? nextStates + "|" : String.format("%-" + maxWidths[i] + "s|", nextStates);
+                        nfaTable.append(text);
+                    } else {
+                        String text = maxWidths[i] == 0 ? "{ }|" : String.format("%-" + maxWidths[i] + "s|", "{ }");
+                        nfaTable.append(text);
+                    }
+                }
+    
+                nfaTable.append("\n");
+            }
+    
+            outputArea2.setText(nfaTable.toString());
+
+
+        } catch (IllegalArgumentException e) {
+            outputArea1.setText(e.getMessage());
+        }
     }
 
     @FXML // F3: NFA to DFA
