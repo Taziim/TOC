@@ -15,6 +15,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
@@ -35,10 +37,22 @@ public class MainController {
     @FXML
     Button checkButton;
 
-    // TODO Help Tab
+    // Help Tab
+    @FXML
+    ImageView helpImg;
+    @FXML
+    Button prevButton, nextButton;
+    private ArrayList<Image> images;
+    private int index;
 
     public void initialize() {
         addMembers();
+
+        images = new ArrayList<>();
+        images.add(new Image(getClass().getResource("manual/help0.png").toExternalForm()));
+        images.add(new Image(getClass().getResource("manual/help1.png").toExternalForm()));
+
+        index = 0;
     }
 
     @FXML // Import RG txt file to inputArea
@@ -282,6 +296,29 @@ public class MainController {
         Font tablefont = Font.font("Monospaced", FontWeight.NORMAL, FontPosture.REGULAR, 15);
         outputArea2.setFont(b ? defaultFont : tablefont);
         
+    }
+
+    @FXML
+    private void prevImg() {
+        if(index > 0) {
+            index--;
+            updateButtons();
+            helpImg.setImage(images.get(index));
+        }
+    }
+
+    @FXML
+    private void nextImg() {
+        if(index < images.size() - 1) {
+            index++;
+            updateButtons();
+            helpImg.setImage(images.get(index));
+        }
+    }
+
+    private void updateButtons() {
+        prevButton.setDisable(index == 0);
+        nextButton.setDisable(index == images.size() - 1);
     }
 
     // adding members data into memberTable
