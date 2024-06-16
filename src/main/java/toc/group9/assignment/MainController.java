@@ -8,6 +8,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -45,13 +51,19 @@ public class MainController {
     private ArrayList<Image> images;
     private int index;
 
+    // data
+    ArrayList<String> states, alphabet, acceptStates;
+    String startState = null;
+    boolean hasEpsilon, isDigit, hasCheckType;
+    HashMap<String, HashMap<String, ArrayList<String>>> nfaTransitions; // key: state(nonterminal), value: [key: alphabet(terminal), value: nextStates(nonterminal)]
+    HashMap<String, HashMap<String, ArrayList<String>>> dfaTransitions;
+
     public void initialize() {
         addMembers();
 
         images = new ArrayList<>();
         images.add(new Image(getClass().getResource("manual/help0.png").toExternalForm()));
         images.add(new Image(getClass().getResource("manual/help1.png").toExternalForm()));
-
         index = 0;
     }
 
@@ -81,103 +93,16 @@ public class MainController {
         inputArea.clear();
         outputArea1.clear();
         outputArea2.clear();
+        initialiseData();
     }
 
     @FXML // F1: RG to NFA
     private void f1() {
         isF4(false);
+        initialiseData();
 
-        ArrayList<String> states = new ArrayList<>();;
-        ArrayList<String> alphabet = new ArrayList<>();;
-        String startState = null;
-        ArrayList<String> acceptStates = new ArrayList<>();;
-        HashMap<String, HashMap<String, ArrayList<String>>> transitions = new HashMap<>();; // key: state(nonterminal), value: [key: alphabet(terminal), value: nextStates(nonterminal)]
-        boolean hasEpsilon = false, isDigit = false, hasCheckType = false;
-
-        // get whole input
-        String input = inputArea.getText().trim();
-
-        /* unreachable
-            if (input.isBlank()) 
-            outputArea1.setText("Please enter a valid regular grammar.");
-        */ 
-
-        // RG to NFA logic
         try {
-            // parse RG (split to LHS & RHS)
-            String[] rules = input.split("\\n");
-            for (String rule : rules) {
-
-                String[] parts = rule.split("->");
-
-                // ensure theres only LHS & RHS
-                if (parts.length != 2) {
-                    throw new IllegalArgumentException("Invalid grammar: Each rule must contain a single arrow(->).");
-                }
-
-                // add LHS to states(variables/nonterminals)
-                String left = parts[0].trim();
-                if (left.isEmpty() || !Character.isUpperCase(left.charAt(0))) {
-                    throw new IllegalArgumentException("Invalid grammar: left-hand side must be a variable");
-                }
-
-                if (!states.contains(left))
-                    states.add(left);
-
-                // set first LHS as start state
-                if (startState == null)
-                    startState = left;
-
-                // parse RHS (get terminals, nonterminals & transtions)
-                String[] rights = parts[1].trim().split("\\|");
-                for (String right : rights) {
-
-                    right = right.trim();
-                    if (right.isEmpty()) 
-                        throw new IllegalArgumentException("Invalid grammar: right-hand side is missing");
-                    
-
-                    // ensure RG is right regular
-                    if (!right.matches("ε|[a-z0-9]?[A-Z]?")) 
-                        throw new IllegalArgumentException("Invalid grammar: each rule should be right regular.");
-                    
-
-                    // add state as accept state if theres ε
-                    if (right.equals("ε")) { // removed as it will affect transition table: || right.matches("[a-z0-9]")
-                        if (!acceptStates.contains(left)) acceptStates.add(left);
-                        hasEpsilon = true;
-
-                    } else {
-                        String terminal = right.length() > 1 ? right.substring(0, 1) : "ε";
-                        String nonterminal = right.length() > 1 ? right.substring(1) : right;
-
-                        // add alphabet(terminal)
-                        if (!terminal.equals("ε") && !alphabet.contains(terminal)) {
-                            if (!hasCheckType) {
-                                isDigit = Character.isDigit(terminal.charAt(0));
-                                hasCheckType = true;
-                            } else if (isDigit != Character.isDigit(terminal.charAt(0))) {
-                                throw new IllegalArgumentException("Invalid grammar: terminal symbols should be consistent (all digits or all letters)");
-                            }
-                            alphabet.add(terminal);
-                        }
-
-                        /*
-                         * add state(nonterminal) - removed as it may messed up states order (thus only
-                         * depend on LHS)
-                         * if (!nonterminal.isEmpty() && !states.contains(nonterminal))
-                         * states.add(nonterminal);
-                         */
-
-                        // add transitions (alphabet & nextState)
-                        transitions.putIfAbsent(left, new HashMap<>());
-                        transitions.get(left).putIfAbsent(terminal, new ArrayList<>());
-                        transitions.get(left).get(terminal).add(nonterminal);
-                    }
-                }
-            }
-
-            Collections.sort(alphabet); // sort alphabet a-z or 0-9
+            parseRG(inputArea.getText().trim());
 
             // NFA formal definition
             StringBuilder nfaDesc = new StringBuilder();
@@ -190,18 +115,20 @@ public class MainController {
             outputArea1.setText(nfaDesc.toString());
 
             // NFA transition table
+            ArrayList<String> nfaAlphabet = new ArrayList<>();
+            nfaAlphabet.addAll(alphabet);
             if (hasEpsilon)
-                alphabet.add("ε");
+                nfaAlphabet.add("ε");
 
-            int[] maxWidths = new int[alphabet.size()];
+            int[] maxWidths = new int[nfaAlphabet.size()];
             Arrays.fill(maxWidths, 0);
 
-            for(String state : states) {
-                for(int i = 0; i < alphabet.size(); i++) {
-                    String a = alphabet.get(i);
+            for (String state : states) {
+                for (int i = 0; i < nfaAlphabet.size(); i++) {
+                    String a = nfaAlphabet.get(i);
 
-                    if(transitions.containsKey(state) && transitions.get(state).containsKey(a)) {
-                        int width = transitions.get(state).get(a).toString().length();
+                    if (nfaTransitions.containsKey(state) && nfaTransitions.get(state).containsKey(a)) {
+                        int width = nfaTransitions.get(state).get(a).toString().length();
                         maxWidths[i] = width > maxWidths[i] ? width : maxWidths[i];
                     }
                 }
@@ -209,17 +136,11 @@ public class MainController {
             
             StringBuilder nfaTable = new StringBuilder();
             nfaTable.append(" δNFA |");
-            for (int i = 0; i < alphabet.size(); i++) {
-                String text = maxWidths[i] == 0 ? alphabet.get(i) +"|" : String.format("%-" + maxWidths[i] + "s|", alphabet.get(i));
+            for (int i = 0; i < nfaAlphabet.size(); i++) {
+                String text = maxWidths[i] == 0 ? nfaAlphabet.get(i) + "|" : String.format("%-" + maxWidths[i] + "s|", nfaAlphabet.get(i));
                 nfaTable.append(text);
             }
             nfaTable.append("\n");
-
-            // nfaTable.append("------");
-            // for (int i = 0; i < alphabet.size(); i++) {
-            //     nfaTable.append(new String(new char[maxWidths[i] + 1]).replace('\0', '-'));
-            // }
-            // nfaTable.append("\n");
 
             for (String state : states) {
                 if (state.equals(startState)) {
@@ -234,10 +155,10 @@ public class MainController {
                 }
                 nfaTable.append(state).append(" |");
 
-                for (int i = 0; i < alphabet.size(); i++) {
-                    String a = alphabet.get(i);
-                    if (transitions.containsKey(state) && transitions.get(state).containsKey(a)) {
-                        String nextStates = "{" + String.join(", ", transitions.get(state).get(a)) + "}";
+                for (int i = 0; i < nfaAlphabet.size(); i++) {
+                    String a = nfaAlphabet.get(i);
+                    if (nfaTransitions.containsKey(state) && nfaTransitions.get(state).containsKey(a)) {
+                        String nextStates = "{" + String.join(", ", nfaTransitions.get(state).get(a)) + "}";
                         String text = maxWidths[i] == 0 ? nextStates + "|" : String.format("%-" + maxWidths[i] + "s|", nextStates);
                         nfaTable.append(text);
                     } else {
@@ -268,9 +189,87 @@ public class MainController {
     @FXML // F3: NFA to DFA
     private void f3() {
         isF4(false);
+        initialiseData();
 
-        outputArea1.setText("you have pressed f3 button"); // for testing only pls remove
+        try {
+            parseRG(inputArea.getText().trim());
 
+            // Create the initial state of the DFA
+            Set<String> initialDFAState = epsilonClosure(Collections.singleton(startState), nfaTransitions);
+            String initialStateName = stateSetToString(initialDFAState);
+
+            // Initialize DFA transitions with the initial state
+            dfaTransitions.put(initialStateName, new HashMap<>());
+
+            // Queue for processing DFA states
+            Queue<Set<String>> queue = new LinkedList<>();
+            queue.add(initialDFAState);
+
+            // Process each DFA state
+            while (!queue.isEmpty()) {
+                Set<String> currentState = queue.poll();
+                String currentStateName = stateSetToString(currentState);
+
+                // Check if current state contains any accept state of the NFA
+                boolean isAcceptState = currentState.stream().anyMatch(acceptStates::contains);
+
+                // Process each symbol in the alphabet
+                for (String symbol : alphabet) {
+                    Set<String> nextState = new HashSet<>();
+                    for (String state : currentState) {
+                        if (nfaTransitions.containsKey(state) && nfaTransitions.get(state).containsKey(symbol)) {
+                            nextState.addAll(nfaTransitions.get(state).get(symbol));
+                        }
+                    }
+
+                    // Calculate epsilon closure of the next state
+                    Set<String> epsilonClosure = epsilonClosure(nextState, nfaTransitions);
+                    String nextStateName = stateSetToString(epsilonClosure);
+
+                    // Add transition to DFA
+                    if (!dfaTransitions.containsKey(currentStateName)) {
+                        dfaTransitions.put(currentStateName, new HashMap<>());
+                    }
+                    dfaTransitions.get(currentStateName).put(symbol, new ArrayList<>(epsilonClosure));
+
+                    // If nextStateName is a new DFA state, add to queue for processing
+                    if (!dfaTransitions.containsKey(nextStateName)) {
+                        queue.add(epsilonClosure);
+                    }
+                }
+            }
+
+            // Output the DFA transition table
+            StringBuilder dfaTable = new StringBuilder();
+            dfaTable.append("DFA Transition Table:\n");
+
+            // Print alphabet headers
+            dfaTable.append("\t");
+            for (String symbol : alphabet) {
+                dfaTable.append(symbol).append("\t");
+            }
+            dfaTable.append("\n");
+
+            // Print DFA states and transitions
+            for (String state : dfaTransitions.keySet()) {
+                dfaTable.append(state).append("\t");
+                Map<String, ArrayList<String>> transitions = dfaTransitions.get(state);
+                for (String symbol : alphabet) {
+                    if (transitions.containsKey(symbol)) {
+                        dfaTable.append(transitions.get(symbol)).append("\t");
+                    } else {
+                        dfaTable.append("{}\t");
+                    }
+                }
+                dfaTable.append("\n");
+            }
+
+            // Display DFA transition table in outputArea2
+            outputArea2.setText(dfaTable.toString());
+
+        } catch (IllegalArgumentException e) {
+            outputArea1.setText(e.getMessage());
+        }
     }
 
     @FXML
@@ -284,8 +283,92 @@ public class MainController {
         outputArea2.setText("OK\nNO\nOK\n"); // for testing only pls remove
     }
 
-    // need user input when testing string so outputArea1 is editable
-    private void isF4(boolean b) {
+    private void initialiseData() {
+        states = new ArrayList<>();
+        alphabet = new ArrayList<>();
+        startState = null;
+        acceptStates = new ArrayList<>();
+        nfaTransitions = new HashMap<>();
+        dfaTransitions = new HashMap<>();
+        hasEpsilon = false;
+        isDigit = false;
+        hasCheckType = false;
+    }
+
+    private void parseRG(String input) throws IllegalArgumentException {
+        // split to LHS & RHS
+        String[] rules = input.split("\\n");
+        for (String rule : rules) {
+
+            String[] parts = rule.split("->");
+
+            // ensure theres only LHS & RHS
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Invalid grammar: Each rule must contain a single arrow(->).");
+            }
+
+            // add LHS to states(variables/nonterminals)
+            String left = parts[0].trim();
+            if (left.isEmpty() || !Character.isUpperCase(left.charAt(0))) {
+                throw new IllegalArgumentException("Invalid grammar: left-hand side must be a variable");
+            }
+
+            if (!states.contains(left))
+                states.add(left);
+
+            // set first LHS as start state
+            if (startState == null)
+                startState = left;
+
+            // parse RHS (get terminals, nonterminals & transtions)
+            String[] rights = parts[1].trim().split("\\|");
+            for (String right : rights) {
+
+                right = right.trim();
+                if (right.isEmpty())
+                    throw new IllegalArgumentException("Invalid grammar: right-hand side is missing");
+
+                // ensure RG is right regular
+                if (!right.matches("ε|[a-z0-9]?[A-Z]?"))
+                    throw new IllegalArgumentException("Invalid grammar: each rule should be right regular.");
+
+                // add state as accept state if theres ε
+                if (right.equals("ε")) { // removed as it will affect transition table: || right.matches("[a-z0-9]")
+                    if (!acceptStates.contains(left))
+                        acceptStates.add(left);
+                    hasEpsilon = true;
+
+                } else {
+                    String terminal = right.length() > 1 ? right.substring(0, 1) : "ε";
+                    String nonterminal = right.length() > 1 ? right.substring(1) : right;
+
+                    // add alphabet(terminal)
+                    if (!terminal.equals("ε") && !alphabet.contains(terminal)) {
+                        if (!hasCheckType) {
+                            isDigit = Character.isDigit(terminal.charAt(0));
+                            hasCheckType = true;
+                        } else if (isDigit != Character.isDigit(terminal.charAt(0))) {
+                            throw new IllegalArgumentException("Invalid grammar: terminal symbols should be consistent (all digits or all letters)");
+                        }
+                        alphabet.add(terminal);
+                    }
+
+                    // add transitions (alphabet & nextState)
+                    nfaTransitions.putIfAbsent(left, new HashMap<>());
+                    nfaTransitions.get(left).putIfAbsent(terminal, new ArrayList<>());
+                    nfaTransitions.get(left).get(terminal).add(nonterminal);
+
+                    Collections.sort(alphabet); // sort alphabet a-z or 0-9
+
+                }
+            }
+        }
+
+        if (acceptStates.isEmpty())
+            throw new IllegalArgumentException("Invalid grammar: missing accepting states");
+    }
+
+    private void isF4(boolean b) { // outputArea1 will be editable for F4
         outputArea1.clear();
         outputArea2.clear();
         
@@ -324,9 +407,9 @@ public class MainController {
     // adding members data into memberTable
     private void addMembers() {
         ArrayList<Member> members = new ArrayList<>();
-        members.add(new Member("leader", "Islam Tariqul", "1211300026", "25%", "F2"));
+        members.add(new Member("leader", "Islam Tariqul", "1211300026", "25%", "F4"));
         members.add(new Member("member", "Adriana Batrisyia binti Hasnan", "1191102379", "25%", "F3"));
-        members.add(new Member("member", "Hui Yen Ling", "1211307537", "25%", "F4"));
+        members.add(new Member("member", "Hui Yen Ling", "1211307537", "25%", "F2"));
         members.add(new Member("member", "Vivian Wee Gek Ting", "1211306086", "25%", "F1"));
         
         roleColumn.setCellValueFactory(new PropertyValueFactory<>("role"));
@@ -336,5 +419,30 @@ public class MainController {
         taskColumn.setCellValueFactory(new PropertyValueFactory<>("task"));
 
         memberTable.getItems().addAll(members);
+    }
+
+    private Set<String> epsilonClosure(Set<String> nextStateSet, HashMap<String, HashMap<String, ArrayList<String>>> nfaTransitions) {
+        Set<String> epsilonClosure = new HashSet<>(nextStateSet);
+        Queue<String> queue = new LinkedList<>(nextStateSet);
+
+        while (!queue.isEmpty()) {
+            String state = queue.poll();
+            if (nfaTransitions.containsKey(state) && nfaTransitions.get(state).containsKey("ε")) {
+                for (String nextState : nfaTransitions.get(state).get("ε")) {
+                    if (!epsilonClosure.contains(nextState)) {
+                        epsilonClosure.add(nextState);
+                        queue.add(nextState);
+                    }   
+                }
+            }
+        }
+
+        return epsilonClosure;
+    }
+
+    private String stateSetToString(Set<String> stateSet) {
+        List<String> sortedStates = new ArrayList<>(stateSet);
+        Collections.sort(sortedStates);
+        return String.join("", sortedStates);
     }
 }
