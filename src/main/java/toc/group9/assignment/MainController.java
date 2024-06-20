@@ -379,16 +379,40 @@ public class MainController {
         }
     }
 
-    @FXML
-    private void f4() {
-        isF4(true);
-        outputArea1.setText("you have pressed f4 button, this TextArea is now editable"); // for testing only pls remove
+    @FXML // Testing strings (up to 5 strings at once)
+    private void testStrings() {
+        if (dfaTransitions == null || dfaTransitions.isEmpty()) {
+            outputArea2.setText("Please Generate the DFA first.");
+            return;
+        }
+
+        String[] testStrings = outputArea1.getText().trim().split("\\n");
+        if (testStrings.length == 0 || testStrings.length > 5) {
+            outputArea2.setText("Please Input strings between 1 to 5 to check.");
+            return;
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (String testString : testStrings) {
+            boolean accepted = simulateDFA(testString);
+            result.append(testString).append("\t").append(accepted ? "OK" : "NO").append("\n");
+        }
+
+        outputArea2.setText(result.toString());
     }
 
-    @FXML // F4: test String
-    private void check() {
-        outputArea2.setText("OK\nNO\nOK\n"); // for testing only pls remove
+    private boolean simulateDFA(String testString) {
+        String currentState = startState;
+        for (char symbol : testString.toCharArray()) {
+            String strSymbol = Character.toString(symbol);
+            if (!dfaTransitions.containsKey(currentState) || !dfaTransitions.get(currentState).containsKey(strSymbol)) {
+                return false;
+            }
+            currentState = stateSetToString(new HashSet<>(dfaTransitions.get(currentState).get(strSymbol)));
+        }
+        return acceptStates.contains(currentState);
     }
+
 
     private void initialiseData() {
         states = new ArrayList<>();
