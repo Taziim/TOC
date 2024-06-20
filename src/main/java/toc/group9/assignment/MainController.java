@@ -379,8 +379,14 @@ public class MainController {
         }
     }
 
+    @FXML private void f4() {
+        isF4(true);
+    }
+
     @FXML // Testing strings (up to 5 strings at once)
-    private void testStrings() {
+    private void check() {
+        initialiseData();
+        
         if (dfaTransitions == null || dfaTransitions.isEmpty()) {
             outputArea2.setText("Please Generate the DFA first.");
             return;
@@ -412,7 +418,6 @@ public class MainController {
         }
         return acceptStates.contains(currentState);
     }
-
 
     private void initialiseData() {
         states = new ArrayList<>();
