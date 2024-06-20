@@ -386,10 +386,45 @@ public class MainController {
     @FXML // Testing strings (up to 5 strings at once)
     private void check() {
         initialiseData();
-        
-        if (dfaTransitions == null || dfaTransitions.isEmpty()) {
-            outputArea2.setText("Please Generate the DFA first.");
-            return;
+
+        try {
+            parseRG(inputArea.getText().trim());
+
+            Set<String> initialDFAState = epsilonClosure(Collections.singleton(startState), nfaTransitions);
+            String initialStateName = stateSetToString(initialDFAState);
+
+            dfaTransitions.put(initialStateName, new HashMap<>());
+
+            Queue<Set<String>> queue = new LinkedList<>();
+            queue.add(initialDFAState);
+
+            while (!queue.isEmpty()) {
+                Set<String> currentState = queue.poll();
+                String currentStateName = stateSetToString(currentState);
+
+                for (String symbol : alphabet) {
+                    Set<String> nextState = new HashSet<>();
+                    for (String state : currentState) {
+                        if (nfaTransitions.containsKey(state) && nfaTransitions.get(state).containsKey(symbol)) {
+                            nextState.addAll(nfaTransitions.get(state).get(symbol));
+                        }
+                    }
+
+                    Set<String> epsilonClosure = epsilonClosure(nextState, nfaTransitions);
+                    String nextStateName = stateSetToString(epsilonClosure);
+
+                    if (!dfaTransitions.containsKey(currentStateName)) {
+                        dfaTransitions.put(currentStateName, new HashMap<>());
+                    }
+                    dfaTransitions.get(currentStateName).put(symbol, new ArrayList<>(epsilonClosure));
+
+                    if (!dfaTransitions.containsKey(nextStateName)) {
+                        queue.add(epsilonClosure);
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            outputArea1.setText(e.getMessage());
         }
 
         String[] testStrings = outputArea1.getText().trim().split("\\n");
